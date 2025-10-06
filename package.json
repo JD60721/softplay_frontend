@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "vite --open /login",
     "build": "npx vite build",
-    "preview": "vite preview",
-    "postinstall": "chmod +x ./node_modules/.bin/vite"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",

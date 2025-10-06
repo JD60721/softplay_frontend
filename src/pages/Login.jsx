@@ -7,19 +7,19 @@ import { FaEye, FaEyeSlash, FaEnvelope, FaLock, FaSpinner } from "react-icons/fa
 export default function Login() {
   const [formData, setFormData] = useState({
     email: "",
-    password: ""
+    password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [formErrors, setFormErrors] = useState({});
   const [touched, setTouched] = useState({});
 
   const dispatch = useDispatch();
-  const { user, loading, error } = useSelector(state => state.auth);
+  const { user, loading, error } = useSelector((state) => state.auth);
 
   // Validaciones en tiempo real
   useEffect(() => {
     const errors = {};
-    
+
     if (touched.email && !formData.email) {
       errors.email = "El email es requerido";
     } else if (touched.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -28,34 +28,34 @@ export default function Login() {
 
     if (touched.password && !formData.password) {
       errors.password = "La contraseña es requerida";
-    } 
+    }
     //else if (touched.password && formData.password.length < 6) {
-      //errors.password = "La contraseña debe tener al menos 6 caracteres";
+    //errors.password = "La contraseña debe tener al menos 6 caracteres";
     //}
 
     setFormErrors(errors);
   }, [formData, touched]);
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
   const handleBlur = (field) => {
-    setTouched(prev => ({
+    setTouched((prev) => ({
       ...prev,
-      [field]: true
+      [field]: true,
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Marcar todos los campos como tocados
     setTouched({ email: true, password: true });
-    
+
     // Verificar si hay errores
     if (Object.keys(formErrors).length === 0 && formData.email && formData.password) {
       dispatch(loginThunk(formData));
@@ -65,7 +65,7 @@ export default function Login() {
   if (user) return <Navigate to="/home" />;
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
+    <div className="h-screen overflow-hidden bg-slate-900 text-slate-100 flex items-center justify-center">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -81,7 +81,10 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+              <label
+                htmlFor="email"
+                className="text-sm font-semibold text-slate-200 flex items-center gap-2"
+              >
                 <FaEnvelope className="text-slate-400" />
                 Correo electrónico
               </label>
@@ -90,14 +93,14 @@ export default function Login() {
                   id="email"
                   type="email"
                   className={`w-full px-4 py-3 bg-slate-900 text-slate-100 placeholder-slate-400 border-2 rounded-xl focus:outline-none transition-colors ${
-                    formErrors.email 
-                      ? 'border-red-400 focus:border-red-500 bg-red-900/20' 
-                      : 'border-slate-700 focus:border-blue-500'
+                    formErrors.email
+                      ? "border-red-400 focus:border-red-500 bg-red-900/20"
+                      : "border-slate-700 focus:border-blue-500"
                   }`}
                   placeholder="tu@email.com"
                   value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  onBlur={() => handleBlur('email')}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                  onBlur={() => handleBlur("email")}
                   disabled={loading}
                 />
               </div>
@@ -111,7 +114,10 @@ export default function Login() {
 
             {/* Password Field */}
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+              <label
+                htmlFor="password"
+                className="text-sm font-semibold text-slate-200 flex items-center gap-2"
+              >
                 <FaLock className="text-slate-400" />
                 Contraseña
               </label>
@@ -120,14 +126,14 @@ export default function Login() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   className={`w-full px-4 py-3 pr-12 bg-slate-900 text-slate-100 placeholder-slate-400 border-2 rounded-xl focus:outline-none transition-colors ${
-                    formErrors.password 
-                      ? 'border-red-400 focus:border-red-500 bg-red-900/20' 
-                      : 'border-slate-700 focus:border-blue-500'
+                    formErrors.password
+                      ? "border-red-400 focus:border-red-500 bg-red-900/20"
+                      : "border-slate-700 focus:border-blue-500"
                   }`}
                   placeholder="••••••••"
                   value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  onBlur={() => handleBlur('password')}
+                  onChange={(e) => handleInputChange("password", e.target.value)}
+                  onBlur={() => handleBlur("password")}
                   disabled={loading}
                 />
                 <button
@@ -175,7 +181,7 @@ export default function Login() {
 
             {/* Forgot Password */}
             <div className="text-center">
-              <Link 
+              <Link
                 to="/forgot-password"
                 className="text-sm text-blue-400 hover:text-blue-300 font-medium hover:underline transition-colors"
               >
@@ -188,9 +194,9 @@ export default function Login() {
         {/* Register Link */}
         <div className="text-center mt-8">
           <p className="text-slate-300">
-            ¿No tienes una cuenta?{' '}
-            <Link 
-              to="/register" 
+            ¿No tienes una cuenta?{" "}
+            <Link
+              to="/register"
               className="text-blue-400 hover:text-blue-300 font-semibold hover:underline transition-colors"
             >
               Regístrate gratis

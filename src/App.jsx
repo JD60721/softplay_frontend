@@ -11,27 +11,35 @@ import AdminCanchas from "./pages/admin/AdminCanchas.jsx";
 import AdminSistema from "./pages/admin/AdminSistema.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import { useSelector, useDispatch } from "react-redux";
-import { logout } from "./redux/slices/authSlice.js";
+import { logout, meThunk } from "./redux/slices/authSlice.js";
 
-export default function App(){
-  const { user } = useSelector(s => s.auth);
+export default function App() {
+  const { user } = useSelector((s) => s.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
 
   // Forzar logout al iniciar la app para evitar sesión persistida
   useEffect(() => {
-    dispatch(logout());
+    dispatch(meThunk());
   }, [dispatch]);
 
   return (
     <div>
-      {location.pathname !== '/canchas' && location.pathname !== '/home' && (
-        <header className="bg-slate-900 border-b border-slate-800 text-slate-100">
+      {user && (
+        <header className="fixed top-0 left-0 right-0 z-50 bg-slate-900 border-b border-slate-800 text-slate-100">
           <div className="max-w-6xl mx-auto p-4 flex items-center gap-4">
             <nav className="flex gap-3 text-slate-200">
-              {user && <Link to="/reservas">Mis reservas</Link>}
-              {user?.role === "admin_sistema" && <Link to="/admin/sistema">Admin Sistema</Link>}
+              {user && location.pathname !== "/home" && <Link to="/home">Inicio</Link>}
+              {user && location.pathname !== "/reservas" && (
+                <Link to="/reservas">Mis reservas</Link>
+              )}
+              {user?.role === "admin_sistema" && location.pathname !== "/admin/sistema" && (
+                <Link to="/admin/sistema">Admin Sistema</Link>
+              )}
+              {user?.role === "admin_sistema" && location.pathname !== "/admin/canchas" && (
+                <Link to="/admin/canchas">Admin Canchas</Link>
+              )}
             </nav>
             <div className="ml-auto">
               {!user ? null : (
@@ -41,7 +49,7 @@ export default function App(){
                     className="btn"
                     onClick={() => {
                       dispatch(logout());
-                      navigate('/login');
+                      navigate("/login");
                     }}
                   >
                     Salir
@@ -52,23 +60,58 @@ export default function App(){
           </div>
         </header>
       )}
-      <main className="max-w-6xl mx-auto p-4">
+      <main className={`max-w-6xl mx-auto p-4 ${user ? "pt-20" : ""}`}>
         <Routes>
-          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route
+            path="/home"
+            element={
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/" element={<Navigate to="/home" />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/canchas" element={<Canchas />} />
           <Route path="/canchas/:id" element={<CanchaDetalle />} />
-          <Route path="/reservar/:id" element={<ProtectedRoute><NuevaReserva /></ProtectedRoute>} />
-          <Route path="/reservas" element={<ProtectedRoute><MisReservas /></ProtectedRoute>} />
+          <Route
+            path="/reservar/:id"
+            element={
+              <ProtectedRoute>
+                <NuevaReserva />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reservas"
+            element={
+              <ProtectedRoute>
+                <MisReservas />
+              </ProtectedRoute>
+            }
+          />
 
-          <Route path="/admin/canchas" element={<ProtectedRoute requireRoles={['admin_cancha','admin_sistema']}><AdminCanchas /></ProtectedRoute>} />
-          <Route path="/admin/sistema" element={<ProtectedRoute requireRoles={['admin_sistema']}><AdminSistema /></ProtectedRoute>} />
+          <Route
+            path="/admin/canchas"
+            element={
+              <ProtectedRoute requireRoles={["admin_cancha", "admin_sistema"]}>
+                <AdminCanchas />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/sistema"
+            element={
+              <ProtectedRoute requireRoles={["admin_sistema"]}>
+                <AdminSistema />
+              </ProtectedRoute>
+            }
+          />
 
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
     </div>
-  )
+  );
 }
