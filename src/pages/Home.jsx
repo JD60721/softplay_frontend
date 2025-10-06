@@ -1,266 +1,503 @@
-import { Link } from "react-router-dom";
-import { FaSearch, FaCalendarAlt, FaCreditCard, FaChartBar, FaCogs, FaUsers, 
-         FaArrowRight, FaStar, FaMapMarkerAlt, FaClock } from "react-icons/fa";
+import React, { useEffect, useRef, useState, useCallback, Fragment } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import Sidebar from './home/Sidebar.jsx';
+import Hero from './home/Hero.jsx';
+import { ThemeSelector } from '../components/ThemeSelector.jsx';
+import { useDispatch, useSelector } from 'react-redux';
+import { logout } from '../redux/slices/authSlice.js';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
+import {
+  Search,
+  SlidersHorizontal,
+  MapPin,
+  Calendar,
+  DollarSign,
+  Star,
+  X,
+  Clock,
+  Coffee,
+  Car,
+  Droplets,
+  ShoppingBag,
+  Lightbulb
+} from "lucide-react";
+import { Dialog, Transition, Menu, Disclosure } from '@headlessui/react';
+import { ChevronDownIcon, AdjustmentsHorizontalIcon, XMarkIcon, ExclamationCircleIcon, InformationCircleIcon, StarIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+
+// API Key desde .env (Vite)
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+// Opciones del mapa
+const defaultCenter = {
+  lat: 3.3928497,
+  lng: -76.5370596
+};
+
+const mapContainerStyle = {
+  width: '100%',
+  height: '100%'
+};
+
+const mapOptions = {
+  mapTypeControl: true,
+  streetViewControl: true,
+  fullscreenControl: true
+};
+
+// Ocultar el mapa en Home; el mapa se muestra en /canchas
+const showMapInHome = false;
 
 export default function Home() {
-  const features = [
-    {
-      icon: FaSearch,
-      title: "Búsqueda inteligente",
-      description: "Encuentra canchas por ubicación, deporte y disponibilidad"
-    },
-    {
-      icon: FaCalendarAlt,
-      title: "Reservas en tiempo real",
-      description: "Disponibilidad actualizada al instante"
-    },
-    {
-      icon: FaCreditCard,
-      title: "Pagos seguros",
-      description: "Múltiples métodos de pago protegidos"
-    },
-    {
-      icon: FaChartBar,
-      title: "Analíticas completas",
-      description: "Reportes detallados para administradores"
-    }
-  ];
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { user } = useSelector(s => s.auth);
+  const [selectedField, setSelectedField] = useState(null);
+  const [map, setMap] = useState(null);
+  
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    id: 'google-map-script',
+    libraries: []
+  });
 
-  const stats = [
-    { number: "500+", label: "Canchas registradas" },
-    { number: "10K+", label: "Reservas realizadas" },
-    { number: "1K+", label: "Usuarios activos" },
-    { number: "4.9★", label: "Calificación promedio" }
+  const [fields, setFields] = useState([]);
+  const [q, setQ] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [error, setError] = useState(null);
+  const [userPos, setUserPos] = useState(null);
+
+  // catálogos
+  const fieldTypes = ["Césped Natural", "Césped Artificial", "Pista Cubierta"];
+  const servicesCatalog = [
+    "Aparcamiento",
+    "Iluminación",
+    "Vestuarios",
+    "Duchas",
+    "Alquiler de Equipos",
+    "Cafetería",
   ];
+  const timeSlots = ["Mañana (6-12h)", "Tarde (12-18h)", "Noche (18-24h)"];
+
+  // Filtros
+  const [filters, setFilters] = useState({
+    location: "",
+    radius: 10,
+    minPrice: 0,
+    maxPrice: 100,
+    fieldType: "", // tipoCancha
+    date: "",
+    timeSlot: "", // horariosDisponibles
+    services: [], // servicios
+    minRating: 0, // valoracion
+    fecha: new Date(),
+  });
+
+  // Callback para cuando el mapa se carga
+  const onMapLoad = useCallback((map) => {
+    setMap(map);
+    
+    // Geolocalización
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setUserPos({ lat, lng });
+          
+          // Centrar mapa en la ubicación del usuario
+          map.setCenter({ lat, lng });
+          map.setZoom(14);
+        },
+        (err) => {
+          console.warn("Error de geolocalización:", err);
+          setError("No pudimos obtener tu ubicación");
+        }
+      );
+    }
+    
+    fetchFields();
+  }, []);
+  
+  // Efecto para cargar datos cuando cambia el mapa
+  useEffect(() => {
+    if (map) {
+      fetchFields();
+    }
+  }, [map]);
+
+  const handleFilterChange = (key, value) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleServiceToggle = (service) => {
+    setFilters((prev) => ({
+      ...prev,
+      services: prev.services.includes(service)
+        ? prev.services.filter((s) => s !== service)
+        : [...prev.services, service],
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      location: "",
+      radius: 10,
+      minPrice: 0,
+      maxPrice: 100,
+      fieldType: "",
+      date: "",
+      timeSlot: "",
+      services: [],
+      minRating: 0,
+    });
+  };
+
+  // No necesitamos esta función con el enfoque declarativo de react-google-maps/api
+
+  const fetchFields = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (q) params.set("q", q);
+
+      params.set("minPrice", String(filters.minPrice));
+      params.set("maxPrice", String(filters.maxPrice));
+      if (filters.fieldType) params.set("fieldType", filters.fieldType);
+      if (filters.location) params.set("location", filters.location);
+      if (filters.date) params.set("date", filters.date);
+      if (filters.timeSlot) params.set("timeSlot", filters.timeSlot);
+      if (filters.minRating) params.set("minRating", String(filters.minRating));
+      if (filters.services.length) params.set("services", filters.services.join(","));
+      if (filters.radius) params.set("radius", String(filters.radius));
+
+      if (userPos) {
+        params.set("lat", String(userPos.lat));
+        params.set("lng", String(userPos.lng));
+      }
+
+      try {
+        // Intentar obtener datos reales de la API
+        const res = await fetch(`/api/canchas?${params.toString()}`);
+        if (!res.ok) throw new Error("Error al cargar canchas");
+        const data = await res.json();
+        setFields(data);
+        
+        // Ajustar el mapa para mostrar todos los marcadores si hay un mapa cargado
+        if (map && data.length > 0) {
+          const bounds = new window.google.maps.LatLngBounds();
+          
+          data.forEach(field => {
+            if (field.ubicacion?.lat && field.ubicacion?.lng) {
+              bounds.extend({
+                lat: field.ubicacion.lat,
+                lng: field.ubicacion.lng
+              });
+            }
+          });
+          
+          map.fitBounds(bounds);
+          
+          // Ajustar el zoom máximo
+          window.google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
+            if (map.getZoom() > 15) map.setZoom(15);
+          });
+        }
+      } catch (apiError) {
+        console.warn("Error al cargar datos de la API, usando datos de ejemplo:", apiError);
+        // Si hay un error, usar datos de ejemplo como fallback
+        const exampleData = [
+          {
+            _id: "1",
+            nombre: "Cancha El Gol",
+            direccion: "Av. Principal 123",
+            precioHora: 50,
+            tipoCancha: "Césped Artificial",
+            ubicacion: { lat: 3.3928497, lng: -76.5370596 },
+            valoracion: 4.5,
+            servicios: ["Iluminación", "Vestuarios"],
+            horariosDisponibles: ["Mañana (6-12h)", "Tarde (12-18h)"]
+          },
+          {
+            _id: "2",
+            nombre: "Complejo Deportivo Central",
+            direccion: "Calle Secundaria 456",
+            precioHora: 65,
+            tipoCancha: "Césped Natural",
+            ubicacion: { lat: 3.3930000, lng: -76.5372000 },
+            valoracion: 4.0,
+            servicios: ["Iluminación", "Vestuarios", "Cafetería"],
+            horariosDisponibles: ["Tarde (12-18h)", "Noche (18-24h)"]
+          },
+          {
+            _id: "3",
+            nombre: "Pista Indoor",
+            direccion: "Av. Deportiva 789",
+            precioHora: 80,
+            tipoCancha: "Pista Cubierta",
+            ubicacion: { lat: 3.3926000, lng: -76.5368000 },
+            valoracion: 4.8,
+            servicios: ["Iluminación", "Vestuarios", "Duchas", "Cafetería"],
+            horariosDisponibles: ["Mañana (6-12h)", "Tarde (12-18h)", "Noche (18-24h)"]
+          }
+        ];
+        setFields(exampleData);
+        
+        // Ajustar el mapa para mostrar todos los marcadores si hay un mapa cargado
+        if (map && exampleData.length > 0) {
+          const bounds = new window.google.maps.LatLngBounds();
+          
+          exampleData.forEach(field => {
+            if (field.ubicacion?.lat && field.ubicacion?.lng) {
+              bounds.extend({
+                lat: field.ubicacion.lat,
+                lng: field.ubicacion.lng
+              });
+            }
+          });
+          
+          map.fitBounds(bounds);
+          
+          // Ajustar el zoom máximo
+          window.google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
+            if (map.getZoom() > 15) map.setZoom(15);
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Error cargando canchas:", err);
+      setError("Error cargando canchas");
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden pt-20 pb-16">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-green-600/10"></div>
-        <div className="relative max-w-6xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-800 mb-6 leading-tight">
-              Reserva tu cancha
-              <span className="bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent"> favorita</span>
-            </h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
-              La plataforma más completa para reservar canchas deportivas. 
-              Encuentra, reserva y juega en segundos.
-            </p>
-            
-            {/* Quick Search */}
-            <div className="bg-white rounded-2xl shadow-xl p-6 max-w-2xl mx-auto mb-8 border border-gray-100">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1 relative">
-                  <FaMapMarkerAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="¿Dónde quieres jugar?"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition-colors"
-                  />
-                </div>
-                <div className="relative">
-                  <FaClock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="date"
-                    className="pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 transition-colors"
-                  />
-                </div>
-                <button className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 shadow-lg">
-                  Buscar
-                </button>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen flex flex-col text-slate-100">
+      {/* Encabezado interno de la página */}
+      <div className="mb-6 bg-slate-800/60 border border-slate-700 rounded-xl px-6 py-4 flex items-center justify-between">
+        <div className="text-xl font-semibold text-slate-200">SoftPlay</div>
+        <div className="flex items-center gap-3 text-slate-300">
+          <span>Tema</span>
+        </div>
+      </div>
 
-          {/* Main Action Cards */}
-          <div className="grid md:grid-cols-2 gap-8 mb-16">
-            {/* User Card */}
-            <div className="group bg-white rounded-2xl shadow-xl border border-gray-100 p-8 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
-              <div className="flex items-center justify-between mb-6">
-                <div className="bg-gradient-to-br from-blue-500 to-blue-600 w-12 h-12 rounded-xl flex items-center justify-center shadow-lg">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-                <div className="text-blue-600 font-semibold text-sm bg-blue-50 px-3 py-1 rounded-full">
-                  Para Jugadores
-                </div>
-              </div>
-              
-              <h2 className="text-2xl font-bold text-gray-800 mb-4 group-hover:text-blue-600 transition-colors">
-                Reserva tu cancha favorita
-              </h2>
-              <p className="text-gray-600 mb-6 leading-relaxed">
-                Encuentra canchas cercanas, revisa disponibilidad en tiempo real y reserva en segundos. 
-                Más de 500 canchas disponibles.
-              </p>
-              
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  Búsqueda por ubicación y deporte
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  Disponibilidad en tiempo real
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  Pagos seguros integrados
-                </div>
-              </div>
-              
-              <Link 
-                to="/canchas" 
-                className="inline-flex items-center justify-center w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-6 rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 shadow-lg group"
+      {/* Panel de Filtros - Usando Headless UI Dialog (mantenido, pero el hero es la vista principal) */}
+      <Transition appear show={showFilters} as={Fragment}>
+        <Dialog as="div" className="relative z-10" onClose={() => setShowFilters(false)}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black bg-opacity-25" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
               >
-                Buscar canchas
-                <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </Link>
-            </div>
-
-            {/* Admin Card */}
-            <div className="group bg-white rounded-2xl shadow-xl border border-gray-100 p-8 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
-              <div className="flex items-center justify-between mb-6">
-                <div className="bg-gradient-to-br from-green-500 to-green-600 w-12 h-12 rounded-xl flex items-center justify-center shadow-lg">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                </div>
-                <div className="text-green-600 font-semibold text-sm bg-green-50 px-3 py-1 rounded-full">
-                  Para Administradores
-                </div>
-              </div>
-              
-              <h2 className="text-2xl font-bold text-gray-800 mb-4 group-hover:text-green-600 transition-colors">
-                ¿Administras una cancha?
-              </h2>
-              <p className="text-gray-600 mb-6 leading-relaxed">
-                Publica tus canchas, gestiona reservas automáticamente y recibe pagos en línea. 
-                Aumenta tus ingresos hasta un 40%.
-              </p>
-              
-              <div className="space-y-3 mb-6">
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  Panel de administración completo
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  Reportes y analíticas detalladas
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  Gestión automática de pagos
-                </div>
-              </div>
-              
-              <Link 
-                to="/register" 
-                className="inline-flex items-center justify-center w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-3 px-6 rounded-xl font-semibold hover:from-green-700 hover:to-green-800 transition-all transform hover:scale-105 shadow-lg group"
-              >
-                Crear cuenta
-                <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-16 bg-white/50 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">Números que hablan por sí solos</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Únete a miles de usuarios que ya confían en nuestra plataforma
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center group">
-                <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-2xl p-6 group-hover:shadow-lg transition-all duration-300">
-                  <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-2">
-                    {stat.number}
+                <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+                  <div className="flex justify-between items-center mb-4">
+                    <Dialog.Title as="h3" className="text-xl font-semibold leading-6 text-gray-900">
+                      Filtros Avanzados
+                    </Dialog.Title>
+                    <div className="flex space-x-2">
+                      <button 
+                        onClick={clearFilters}
+                        className="text-blue-500 hover:text-blue-700 font-medium"
+                      >
+                        Limpiar filtros
+                      </button>
+                      <button 
+                        onClick={() => setShowFilters(false)}
+                        className="text-gray-500 hover:text-gray-700"
+                      >
+                        <XMarkIcon className="h-5 w-5" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-gray-600 font-medium">{stat.label}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* Features Section */}
-      <section className="py-16">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">¿Por qué elegirnos?</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Ofrecemos la experiencia más completa para reservar y administrar canchas deportivas
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => {
-              const IconComponent = feature.icon;
-              return (
-                <div key={index} className="group text-center">
-                  <div className="bg-gradient-to-br from-blue-500 to-green-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:shadow-xl transition-all duration-300 transform group-hover:scale-110">
-                    <IconComponent className="text-white text-2xl" />
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Precio */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-gray-700">Precio por hora</h4>
+                      <div className="flex items-center space-x-4">
+                        <div>
+                          <label className="block text-sm text-gray-600">Mínimo</label>
+                          <input
+                            type="number"
+                            value={filters.minPrice}
+                            onChange={(e) => handleFilterChange('minPrice', Number(e.target.value))}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-600">Máximo</label>
+                          <input
+                            type="number"
+                            value={filters.maxPrice}
+                            onChange={(e) => handleFilterChange('maxPrice', Number(e.target.value))}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Fecha */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-gray-700">Fecha</h4>
+                      <DatePicker
+                        selected={selectedDate}
+                        onChange={(date) => {
+                          setSelectedDate(date);
+                          handleFilterChange('date', date.toISOString().split('T')[0]);
+                        }}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        dateFormat="dd/MM/yyyy"
+                      />
+                    </div>
+
+                    {/* Tipo de Cancha */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-gray-700">Tipo de Cancha</h4>
+                      <div className="space-y-2">
+                        {fieldTypes.map((tipo) => (
+                          <label key={tipo} className="flex items-center">
+                            <input
+                              type="radio"
+                              name="fieldType"
+                              value={tipo}
+                              checked={filters.fieldType === tipo}
+                              onChange={(e) => handleFilterChange('fieldType', e.target.value)}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                            />
+                            <span className="ml-2 text-gray-700">{tipo}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Horarios Disponibles */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-gray-700">Horarios Disponibles</h4>
+                      <div className="space-y-2">
+                        {timeSlots.map((horario) => (
+                          <label key={horario} className="flex items-center">
+                            <input
+                              type="radio"
+                              name="timeSlot"
+                              value={horario}
+                              checked={filters.timeSlot === horario}
+                              onChange={(e) => handleFilterChange('timeSlot', e.target.value)}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                            />
+                            <span className="ml-2 text-gray-700">{horario}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Servicios */}
+                    <div className="space-y-2 col-span-1 md:col-span-2">
+                      <h4 className="font-medium text-gray-700">Servicios</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {servicesCatalog.map((servicio) => (
+                          <label key={servicio} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={filters.services.includes(servicio)}
+                              onChange={() => handleServiceToggle(servicio)}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <span className="ml-2 text-gray-700">{servicio}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Valoración */}
+                    <div className="space-y-2 col-span-1 md:col-span-2">
+                      <div className="flex justify-between">
+                        <h4 className="font-medium text-gray-700">Valoración mínima</h4>
+                        <span className="text-blue-600 font-medium">{filters.minRating} estrellas</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="5"
+                        step="0.5"
+                        value={filters.minRating}
+                        onChange={(e) => handleFilterChange('minRating', Number(e.target.value))}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>0</span>
+                        <span>1</span>
+                        <span>2</span>
+                        <span>3</span>
+                        <span>4</span>
+                        <span>5</span>
+                      </div>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-800 mb-3 group-hover:text-blue-600 transition-colors">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    {feature.description}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-r from-blue-600 to-green-600 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="relative max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-4xl font-bold text-white mb-6">
-            ¿Listo para comenzar?
-          </h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Únete a nuestra comunidad y descubre la forma más fácil de reservar canchas deportivas
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              to="/register"
-              className="bg-white text-blue-600 py-4 px-8 rounded-xl font-semibold hover:bg-gray-50 transition-all transform hover:scale-105 shadow-lg inline-flex items-center justify-center"
-            >
-              Crear cuenta gratis
-              <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
-            </Link>
-            <Link
-              to="/canchas"
-              className="border-2 border-white text-white py-4 px-8 rounded-xl font-semibold hover:bg-white hover:text-blue-600 transition-all transform hover:scale-105 inline-flex items-center justify-center"
-            >
-              Explorar canchas
-              <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </Link>
+                  <div className="flex justify-end mt-6 space-x-3">
+                    <button 
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
+                      onClick={() => setShowFilters(false)}
+                    >
+                      Cancelar
+                    </button>
+                    <button 
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                      onClick={() => {
+                        fetchFields();
+                        setShowFilters(false);
+                      }}
+                    >
+                      Aplicar filtros
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* Hero principal */}
+      <section className="flex-1">
+        <div className="grid md:grid-cols-12 gap-8 items-start">
+          {/* Sidebar izquierda */}
+          <div className="md:col-span-3">
+            <Sidebar />
+          </div>
+
+          {/* Hero principal */}
+          <div className="md:col-span-9">
+            <Hero />
           </div>
         </div>
+
+        {/* Selector de tema flotante */}
+        <ThemeSelector />
+
+        {error && (
+          <div className="mt-6 bg-red-600 text-white px-4 py-2 rounded-lg shadow inline-block">
+            {error}
+          </div>
+        )}
       </section>
     </div>
   );

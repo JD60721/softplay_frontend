@@ -1,8 +1,10 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../api/axios.js";
 
-export const fetchCanchas = createAsyncThunk("canchas/list", async (q="") => {
-  const { data } = await api.get("/canchas", { params: { q } });
+export const fetchCanchas = createAsyncThunk("canchas/list", async (params = {}) => {
+  // Si params es un string, asumimos que es el parámetro q (búsqueda por texto)
+  const searchParams = typeof params === 'string' ? { q: params } : params;
+  const { data } = await api.get("/canchas", { params: searchParams });
   return data;
 });
 export const createCancha = createAsyncThunk("canchas/create", async (payload) => {

@@ -121,15 +121,15 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="bg-gradient-to-r from-green-600 to-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <FaUser className="text-white text-2xl" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Crear cuenta</h1>
-          <p className="text-gray-600">Únete y comienza a reservar canchas</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Crear cuenta</h1>
+          <p className="text-slate-300">Únete y comienza a reservar canchas</p>
         </div>
 
         {/* Form Card */}
@@ -144,7 +144,7 @@ export default function Register() {
               <input
                 id="name"
                 type="text"
-                className={`w-full px-4 py-3 bg-gray-50 border-2 rounded-xl focus:outline-none transition-colors ${
+                className={`w-full px-4 py-3 bg-gray-50 text-gray-800 placeholder-gray-500 border-2 rounded-xl focus:outline-none transition-colors ${
                   formErrors.name 
                     ? 'border-red-300 focus:border-red-500 bg-red-50' 
                     : 'border-gray-200 focus:border-blue-500 focus:bg-white'
@@ -172,7 +172,7 @@ export default function Register() {
               <input
                 id="email"
                 type="email"
-                className={`w-full px-4 py-3 bg-gray-50 border-2 rounded-xl focus:outline-none transition-colors ${
+                className={`w-full px-4 py-3 bg-gray-50 text-gray-800 placeholder-gray-500 border-2 rounded-xl focus:outline-none transition-colors ${
                   formErrors.email 
                     ? 'border-red-300 focus:border-red-500 bg-red-50' 
                     : 'border-gray-200 focus:border-blue-500 focus:bg-white'
@@ -201,7 +201,7 @@ export default function Register() {
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  className={`w-full px-4 py-3 pr-12 bg-gray-50 border-2 rounded-xl focus:outline-none transition-colors ${
+                  className={`w-full px-4 py-3 pr-12 bg-gray-50 text-gray-800 placeholder-gray-500 border-2 rounded-xl focus:outline-none transition-colors ${
                     formErrors.password 
                       ? 'border-red-300 focus:border-red-500 bg-red-50' 
                       : 'border-gray-200 focus:border-blue-500 focus:bg-white'
@@ -257,7 +257,7 @@ export default function Register() {
                 <input
                   id="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
-                  className={`w-full px-4 py-3 pr-12 bg-gray-50 border-2 rounded-xl focus:outline-none transition-colors ${
+                  className={`w-full px-4 py-3 pr-12 bg-gray-50 text-gray-800 placeholder-gray-500 border-2 rounded-xl focus:outline-none transition-colors ${
                     formErrors.confirmPassword 
                       ? 'border-red-300 focus:border-red-500 bg-red-50' 
                       : formData.confirmPassword && formData.password === formData.confirmPassword
@@ -351,11 +351,11 @@ export default function Register() {
 
         {/* Login Link */}
         <div className="text-center mt-8">
-          <p className="text-gray-600">
+          <p className="text-slate-300">
             ¿Ya tienes una cuenta?{' '}
             <Link 
               to="/login" 
-              className="text-blue-600 hover:text-blue-800 font-semibold hover:underline transition-colors"
+              className="text-blue-400 hover:text-blue-300 font-semibold hover:underline transition-colors"
             >
               Inicia sesión
             </Link>

@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate, Link } from "react-router-dom";
+import { Routes, Route, Navigate, Link, useNavigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import Home from "./pages/Home.jsx";
@@ -15,35 +16,46 @@ import { logout } from "./redux/slices/authSlice.js";
 export default function App(){
   const { user } = useSelector(s => s.auth);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Forzar logout al iniciar la app para evitar sesión persistida
+  useEffect(() => {
+    dispatch(logout());
+  }, [dispatch]);
+
   return (
     <div>
-      <header className="bg-white border-b">
-        <div className="max-w-6xl mx-auto p-4 flex items-center gap-4">
-          <Link to="/" className="font-bold">🏟️ Canchas</Link>
-          <nav className="flex gap-3">
-            <Link to="/canchas">Buscar canchas</Link>
-            {user && <Link to="/reservas">Mis reservas</Link>}
-            {user?.role !== "usuario" && <Link to="/admin/canchas">Admin Cancha</Link>}
-            {user?.role === "admin_sistema" && <Link to="/admin/sistema">Admin Sistema</Link>}
-          </nav>
-          <div className="ml-auto">
-            {!user ? (
-              <div className="flex gap-2">
-                <Link to="/login" className="btn btn-primary">Ingresar</Link>
-                <Link to="/register" className="btn">Crear cuenta</Link>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                <span>Hola, {user.name}</span>
-                <button className="btn" onClick={()=>dispatch(logout())}>Salir</button>
-              </div>
-            )}
+      {location.pathname !== '/canchas' && location.pathname !== '/home' && (
+        <header className="bg-slate-900 border-b border-slate-800 text-slate-100">
+          <div className="max-w-6xl mx-auto p-4 flex items-center gap-4">
+            <nav className="flex gap-3 text-slate-200">
+              {user && <Link to="/reservas">Mis reservas</Link>}
+              {user?.role === "admin_sistema" && <Link to="/admin/sistema">Admin Sistema</Link>}
+            </nav>
+            <div className="ml-auto">
+              {!user ? null : (
+                <div className="flex items-center gap-3">
+                  <span>Hola, {user.name}</span>
+                  <button
+                    className="btn"
+                    onClick={() => {
+                      dispatch(logout());
+                      navigate('/login');
+                    }}
+                  >
+                    Salir
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
       <main className="max-w-6xl mx-auto p-4">
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/" element={<Navigate to="/home" />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/canchas" element={<Canchas />} />

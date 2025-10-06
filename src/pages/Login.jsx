@@ -62,37 +62,37 @@ export default function Login() {
     }
   };
 
-  if (user) return <Navigate to="/" />;
+  if (user) return <Navigate to="/home" />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <FaLock className="text-white text-2xl" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">¡Bienvenido!</h1>
-          <p className="text-gray-600">Ingresa a tu cuenta para continuar</p>
+          <h1 className="text-3xl font-bold text-white mb-2">¡Bienvenido!</h1>
+          <p className="text-slate-300">Ingresa a tu cuenta para continuar</p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+        <div className="bg-slate-800 rounded-2xl shadow-xl border border-slate-700 p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <FaEnvelope className="text-gray-400" />
+              <label htmlFor="email" className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                <FaEnvelope className="text-slate-400" />
                 Correo electrónico
               </label>
               <div className="relative">
                 <input
                   id="email"
                   type="email"
-                  className={`w-full px-4 py-3 bg-gray-50 border-2 rounded-xl focus:outline-none transition-colors ${
+                  className={`w-full px-4 py-3 bg-slate-900 text-slate-100 placeholder-slate-400 border-2 rounded-xl focus:outline-none transition-colors ${
                     formErrors.email 
-                      ? 'border-red-300 focus:border-red-500 bg-red-50' 
-                      : 'border-gray-200 focus:border-blue-500 focus:bg-white'
+                      ? 'border-red-400 focus:border-red-500 bg-red-900/20' 
+                      : 'border-slate-700 focus:border-blue-500'
                   }`}
                   placeholder="tu@email.com"
                   value={formData.email}
@@ -102,7 +102,7 @@ export default function Login() {
                 />
               </div>
               {formErrors.email && (
-                <p className="text-sm text-red-600 flex items-center gap-1">
+                <p className="text-sm text-red-400 flex items-center gap-1">
                   <span className="w-1 h-1 bg-red-600 rounded-full"></span>
                   {formErrors.email}
                 </p>
@@ -111,18 +111,18 @@ export default function Login() {
 
             {/* Password Field */}
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <FaLock className="text-gray-400" />
+              <label htmlFor="password" className="text-sm font-semibold text-slate-200 flex items-center gap-2">
+                <FaLock className="text-slate-400" />
                 Contraseña
               </label>
               <div className="relative">
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  className={`w-full px-4 py-3 pr-12 bg-gray-50 border-2 rounded-xl focus:outline-none transition-colors ${
+                  className={`w-full px-4 py-3 pr-12 bg-slate-900 text-slate-100 placeholder-slate-400 border-2 rounded-xl focus:outline-none transition-colors ${
                     formErrors.password 
-                      ? 'border-red-300 focus:border-red-500 bg-red-50' 
-                      : 'border-gray-200 focus:border-blue-500 focus:bg-white'
+                      ? 'border-red-400 focus:border-red-500 bg-red-900/20' 
+                      : 'border-slate-700 focus:border-blue-500'
                   }`}
                   placeholder="••••••••"
                   value={formData.password}
@@ -132,7 +132,7 @@ export default function Login() {
                 />
                 <button
                   type="button"
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={loading}
                 >
@@ -140,7 +140,7 @@ export default function Login() {
                 </button>
               </div>
               {formErrors.password && (
-                <p className="text-sm text-red-600 flex items-center gap-1">
+                <p className="text-sm text-red-400 flex items-center gap-1">
                   <span className="w-1 h-1 bg-red-600 rounded-full"></span>
                   {formErrors.password}
                 </p>
@@ -149,8 +149,8 @@ export default function Login() {
 
             {/* Server Error */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                <p className="text-red-700 text-sm font-medium">{error}</p>
+              <div className="bg-red-900/20 border border-red-500 rounded-xl p-4">
+                <p className="text-red-300 text-sm font-medium">{error}</p>
               </div>
             )}
 
@@ -159,7 +159,7 @@ export default function Login() {
               type="submit"
               disabled={loading || Object.keys(formErrors).length > 0}
               className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 px-6 rounded-xl font-semibold
-                       hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-200
+                       hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-4 focus:ring-blue-700/30
                        disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] transition-all
                        shadow-lg hover:shadow-xl"
             >
@@ -177,7 +177,7 @@ export default function Login() {
             <div className="text-center">
               <Link 
                 to="/forgot-password"
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium hover:underline transition-colors"
+                className="text-sm text-blue-400 hover:text-blue-300 font-medium hover:underline transition-colors"
               >
                 ¿Olvidaste tu contraseña?
               </Link>
@@ -187,11 +187,11 @@ export default function Login() {
 
         {/* Register Link */}
         <div className="text-center mt-8">
-          <p className="text-gray-600">
+          <p className="text-slate-300">
             ¿No tienes una cuenta?{' '}
             <Link 
               to="/register" 
-              className="text-blue-600 hover:text-blue-800 font-semibold hover:underline transition-colors"
+              className="text-blue-400 hover:text-blue-300 font-semibold hover:underline transition-colors"
             >
               Regístrate gratis
             </Link>
