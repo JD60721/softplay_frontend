@@ -1,12 +1,13 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../api/axios.js";
+import { API_BASE_URL } from "../../config/api.js";
 
 const token = localStorage.getItem("token");
 const userLS = localStorage.getItem("user");
 
 export const loginThunk = createAsyncThunk("auth/login", async (payload, { rejectWithValue }) => {
   try {
-    const { data } = await api.post("/auth/login", payload);
+    const { data } = await api.post(`${API_BASE_URL.replace(/\/$/, '')}/auth/login`, payload);
     return data;
   } catch (error) {
     const message = error.response?.data?.message || "Error de conexión";
@@ -15,7 +16,7 @@ export const loginThunk = createAsyncThunk("auth/login", async (payload, { rejec
 });
 export const registerThunk = createAsyncThunk("auth/register", async (payload, { rejectWithValue }) => {
   try {
-    const { data } = await api.post("/auth/register", payload);
+    const { data } = await api.post(`${API_BASE_URL.replace(/\/$/, '')}/auth/register`, payload);
     return data;
   } catch (error) {
     const message = error.response?.data?.message || "Error de conexión";
@@ -23,7 +24,7 @@ export const registerThunk = createAsyncThunk("auth/register", async (payload, {
   }
 });
 export const meThunk = createAsyncThunk("auth/me", async () => {
-  const { data } = await api.get("/auth/me");
+  const { data } = await api.get(`${API_BASE_URL.replace(/\/$/, '')}/auth/me`);
   return data;
 });
 
