@@ -1,9 +1,9 @@
 import axios from "axios";
 
-// En desarrollo, usa el proxy de Vite para evitar puertos mal configurados
+// En desarrollo, usa el proxy de Vite. En producción usa VITE_API_URL o fallback explícito
 const baseURL = import.meta.env.DEV
   ? "/api"
-  : (import.meta.env.VITE_API_URL || "/api");
+  : (import.meta.env.VITE_API_URL || "https://softplay-backend.vercel.app/api");
 
 const api = axios.create({
   baseURL: baseURL,
