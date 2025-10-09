@@ -1,7 +1,12 @@
 import axios from "axios";
 
+// En desarrollo, usa el proxy de Vite para evitar puertos mal configurados
+const baseURL = import.meta.env.DEV
+  ? "/api"
+  : (import.meta.env.VITE_API_URL || "/api");
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+  baseURL: baseURL,
 });
 
 // Interceptor de request para agregar token

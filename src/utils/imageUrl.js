@@ -6,14 +6,36 @@
  * @returns {string} - URL completa para usar en <img src="..." />
  */
 export const imageUrl = (filename) => {
-  if (!filename) return "/no-image.png"; // Imagen por defecto si no hay archivo
+  if (!filename) {
+    console.warn('imageUrl: No filename provided');
+    return "/no-image.png"; // Imagen por defecto si no hay archivo
+  }
 
-  const baseUrl = import.meta.env.VITE_API_URL.replace("/api", "");
+  const baseUrl = import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:5000";
 
   // Si ya contiene /uploads/, evitar duplicarlo
   if (filename.startsWith("/uploads")) {
-    return `${baseUrl}${filename}`;
+    const fullUrl = `${baseUrl}${filename}`;
+    console.log('imageUrl (with /uploads):', fullUrl);
+    return fullUrl;
   }
 
-  return `${baseUrl}/uploads/${filename}`;
+  const fullUrl = `${baseUrl}/uploads/${filename}`;
+  console.log('imageUrl (adding /uploads):', fullUrl);
+  return fullUrl;
+};
+
+/**
+ * Verifica si una imagen existe y está disponible
+ * @param {string} url - URL de la imagen
+ * @returns {Promise<boolean>} - true si la imagen existe
+ */
+export const checkImageExists = async (url) => {
+  try {
+    const response = await fetch(url, { method: 'HEAD' });
+    return response.ok;
+  } catch (error) {
+    console.error('Error checking image:', error);
+    return false;
+  }
 };

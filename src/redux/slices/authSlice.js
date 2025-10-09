@@ -4,13 +4,23 @@ import api from "../../api/axios.js";
 const token = localStorage.getItem("token");
 const userLS = localStorage.getItem("user");
 
-export const loginThunk = createAsyncThunk("auth/login", async (payload, thunk) => {
-  const { data } = await api.post("/auth/login", payload);
-  return data;
+export const loginThunk = createAsyncThunk("auth/login", async (payload, { rejectWithValue }) => {
+  try {
+    const { data } = await api.post("/auth/login", payload);
+    return data;
+  } catch (error) {
+    const message = error.response?.data?.message || "Error de conexión";
+    return rejectWithValue(message);
+  }
 });
-export const registerThunk = createAsyncThunk("auth/register", async (payload) => {
-  const { data } = await api.post("/auth/register", payload);
-  return data;
+export const registerThunk = createAsyncThunk("auth/register", async (payload, { rejectWithValue }) => {
+  try {
+    const { data } = await api.post("/auth/register", payload);
+    return data;
+  } catch (error) {
+    const message = error.response?.data?.message || "Error de conexión";
+    return rejectWithValue(message);
+  }
 });
 export const meThunk = createAsyncThunk("auth/me", async () => {
   const { data } = await api.get("/auth/me");
@@ -35,12 +45,14 @@ const slice = createSlice({
         localStorage.setItem("token", payload.token);
         localStorage.setItem("user", JSON.stringify(payload.user));
       })
-      .addCase(loginThunk.rejected, (s, a)=>{ s.loading=false; s.error=a.error.message; })
+      .addCase(loginThunk.rejected, (s, a)=>{ s.loading=false; s.error=a.payload || a.error.message; })
+      .addCase(registerThunk.pending, s=>{s.loading=true; s.error=null;})
       .addCase(registerThunk.fulfilled, (s,{payload})=>{
-        s.token=payload.token; s.user=payload.user;
+        s.loading=false; s.token=payload.token; s.user=payload.user;
         localStorage.setItem("token", payload.token);
         localStorage.setItem("user", JSON.stringify(payload.user));
       })
+      .addCase(registerThunk.rejected, (s, a)=>{ s.loading=false; s.error=a.payload || a.error.message; })
       .addCase(meThunk.fulfilled, (s,{payload})=>{ s.user = payload; });
   }
 });

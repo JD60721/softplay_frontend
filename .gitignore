@@ -1,12 +1,21 @@
-# Node/Vite
-node_modules/
-dist/
-.vite/
+# Dependencias
+/node_modules
+/.pnp
+.pnp.js
 
-# Env files
+# Testing
+/coverage
+
+# Producción
+/dist
+/build
+
+# Archivos de entorno
 .env
 .env.local
-.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Logs
 npm-debug.log*
@@ -14,15 +23,16 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Editor/OS
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
 .DS_Store
-Thumbs.db
-.idea/
-.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# Coverage/Tests
-coverage/
-
-# Misc
-*.local
-*.swp
+# Vite
+.vite

@@ -1,11 +1,7 @@
-import React, { useEffect, useRef, useState, useCallback, Fragment } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import Sidebar from "./home/Sidebar.jsx";
-import Hero from "./home/Hero.jsx";
-import { ThemeSelector } from "../components/ThemeSelector.jsx";
-import { useDispatch, useSelector } from "react-redux";
-import { logout } from "../redux/slices/authSlice.js";
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
+import { useEffect, useRef, useState } from "react";
+import api from "../api/axios.js";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import {
   Search,
   SlidersHorizontal,
@@ -14,66 +10,24 @@ import {
   DollarSign,
   Star,
   X,
-  Clock,
-  Coffee,
-  Car,
-  Droplets,
-  ShoppingBag,
-  Lightbulb,
 } from "lucide-react";
-import { Dialog, Transition, Menu, Disclosure } from "@headlessui/react";
-import {
-  ChevronDownIcon,
-  AdjustmentsHorizontalIcon,
-  XMarkIcon,
-  ExclamationCircleIcon,
-  InformationCircleIcon,
-  StarIcon,
-  CheckCircleIcon,
-} from "@heroicons/react/24/outline";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 
-// API Key desde .env (Vite)
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
-// Opciones del mapa
-const defaultCenter = {
-  lat: 3.3928497,
-  lng: -76.5370596,
-};
-
-const mapContainerStyle = {
-  width: "100%",
-  height: "100%",
-};
-
-const mapOptions = {
-  mapTypeControl: true,
-  streetViewControl: true,
-  fullscreenControl: true,
-};
-
-// Ocultar el mapa en Home; el mapa se muestra en /canchas
-const showMapInHome = false;
+// Fix íconos Leaflet para Vite
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 
 export default function Home() {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { user } = useSelector((s) => s.auth);
-  const [selectedField, setSelectedField] = useState(null);
-  const [map, setMap] = useState(null);
-
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    id: "google-map-script",
-    libraries: [],
-  });
+  const mapRef = useRef(null);        // div del mapa
+  const mapInstance = useRef(null);   // objeto Leaflet
+  const fieldMarkersRef = useRef([]); // marcadores de canchas
 
   const [fields, setFields] = useState([]);
   const [q, setQ] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [error, setError] = useState(null);
   const [userPos, setUserPos] = useState(null);
 
@@ -95,17 +49,22 @@ export default function Home() {
     radius: 10,
     minPrice: 0,
     maxPrice: 100,
-    fieldType: "", // tipoCancha
+    fieldType: "",
     date: "",
-    timeSlot: "", // horariosDisponibles
-    services: [], // servicios
-    minRating: 0, // valoracion
-    fecha: new Date(),
+    timeSlot: "",
+    services: [],
+    minRating: 0,
   });
 
-  // Callback para cuando el mapa se carga
-  const onMapLoad = useCallback((map) => {
-    setMap(map);
+  // Inicializar mapa solo una vez
+  useEffect(() => {
+    if (!mapRef.current || mapInstance.current) return;
+
+    mapInstance.current = L.map(mapRef.current).setView([-34.6037, -58.3816], 13);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors",
+    }).addTo(mapInstance.current);
 
     // Geolocalización
     if (navigator.geolocation) {
@@ -114,10 +73,11 @@ export default function Home() {
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
           setUserPos({ lat, lng });
-
-          // Centrar mapa en la ubicación del usuario
-          map.setCenter({ lat, lng });
-          map.setZoom(14);
+          mapInstance.current.setView([lat, lng], 14);
+          L.marker([lat, lng])
+            .addTo(mapInstance.current)
+            .bindPopup("Tu ubicación actual")
+            .openPopup();
         },
         (err) => {
           console.warn("Error de geolocalización:", err);
@@ -128,13 +88,6 @@ export default function Home() {
 
     fetchFields();
   }, []);
-
-  // Efecto para cargar datos cuando cambia el mapa
-  useEffect(() => {
-    if (map) {
-      fetchFields();
-    }
-  }, [map]);
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -163,7 +116,14 @@ export default function Home() {
     });
   };
 
-  // No necesitamos esta función con el enfoque declarativo de react-google-maps/api
+  const clearFieldMarkers = () => {
+    fieldMarkersRef.current.forEach((m) => {
+      if (mapInstance.current && mapInstance.current.hasLayer(m)) {
+        mapInstance.current.removeLayer(m);
+      }
+    });
+    fieldMarkersRef.current = [];
+  };
 
   const fetchFields = async () => {
     try {
@@ -185,93 +145,27 @@ export default function Home() {
         params.set("lng", String(userPos.lng));
       }
 
-      try {
-        // Intentar obtener datos reales de la API
-        const res = await fetch(`/api/canchas?${params.toString()}`);
-        if (!res.ok) throw new Error("Error al cargar canchas");
-        const data = await res.json();
-        setFields(data);
+      const { data } = await api.get(`/canchas?${params.toString()}`);
+      setFields(data);
 
-        // Ajustar el mapa para mostrar todos los marcadores si hay un mapa cargado
-        if (map && data.length > 0) {
-          const bounds = new window.google.maps.LatLngBounds();
+      clearFieldMarkers();
 
-          data.forEach((field) => {
-            if (field.ubicacion?.lat && field.ubicacion?.lng) {
-              bounds.extend({
-                lat: field.ubicacion.lat,
-                lng: field.ubicacion.lng,
-              });
-            }
-          });
-
-          map.fitBounds(bounds);
-
-          // Ajustar el zoom máximo
-          window.google.maps.event.addListenerOnce(map, "bounds_changed", () => {
-            if (map.getZoom() > 15) map.setZoom(15);
-          });
+      const markers = [];
+      data.forEach((field) => {
+        if (field.ubicacion?.lat && field.ubicacion?.lng) {
+          const marker = L.marker([field.ubicacion.lat, field.ubicacion.lng])
+            .addTo(mapInstance.current)
+            .bindPopup(
+              `<b>${field.nombre}</b><br/>${field.direccion || ""}<br/>$${field.precioHora}/hora`
+            );
+          fieldMarkersRef.current.push(marker);
+          markers.push(marker);
         }
-      } catch (apiError) {
-        console.warn("Error al cargar datos de la API, usando datos de ejemplo:", apiError);
-        // Si hay un error, usar datos de ejemplo como fallback
-        const exampleData = [
-          {
-            _id: "1",
-            nombre: "Cancha El Gol",
-            direccion: "Av. Principal 123",
-            precioHora: 50,
-            tipoCancha: "Césped Artificial",
-            ubicacion: { lat: 3.3928497, lng: -76.5370596 },
-            valoracion: 4.5,
-            servicios: ["Iluminación", "Vestuarios"],
-            horariosDisponibles: ["Mañana (6-12h)", "Tarde (12-18h)"],
-          },
-          {
-            _id: "2",
-            nombre: "Complejo Deportivo Central",
-            direccion: "Calle Secundaria 456",
-            precioHora: 65,
-            tipoCancha: "Césped Natural",
-            ubicacion: { lat: 3.393, lng: -76.5372 },
-            valoracion: 4.0,
-            servicios: ["Iluminación", "Vestuarios", "Cafetería"],
-            horariosDisponibles: ["Tarde (12-18h)", "Noche (18-24h)"],
-          },
-          {
-            _id: "3",
-            nombre: "Pista Indoor",
-            direccion: "Av. Deportiva 789",
-            precioHora: 80,
-            tipoCancha: "Pista Cubierta",
-            ubicacion: { lat: 3.3926, lng: -76.5368 },
-            valoracion: 4.8,
-            servicios: ["Iluminación", "Vestuarios", "Duchas", "Cafetería"],
-            horariosDisponibles: ["Mañana (6-12h)", "Tarde (12-18h)", "Noche (18-24h)"],
-          },
-        ];
-        setFields(exampleData);
+      });
 
-        // Ajustar el mapa para mostrar todos los marcadores si hay un mapa cargado
-        if (map && exampleData.length > 0) {
-          const bounds = new window.google.maps.LatLngBounds();
-
-          exampleData.forEach((field) => {
-            if (field.ubicacion?.lat && field.ubicacion?.lng) {
-              bounds.extend({
-                lat: field.ubicacion.lat,
-                lng: field.ubicacion.lng,
-              });
-            }
-          });
-
-          map.fitBounds(bounds);
-
-          // Ajustar el zoom máximo
-          window.google.maps.event.addListenerOnce(map, "bounds_changed", () => {
-            if (map.getZoom() > 15) map.setZoom(15);
-          });
-        }
+      if (markers.length) {
+        const group = L.featureGroup(markers);
+        mapInstance.current.fitBounds(group.getBounds().pad(0.25));
       }
     } catch (err) {
       console.error("Error cargando canchas:", err);
@@ -280,223 +174,92 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col text-slate-100">
-      {/* Panel de Filtros - Usando Headless UI Dialog (mantenido, pero el hero es la vista principal) */}
-      <Transition appear show={showFilters} as={Fragment}>
-        <Dialog as="div" className="relative z-10" onClose={() => setShowFilters(false)}>
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <div className="fixed inset-0 bg-black bg-opacity-25" />
-          </Transition.Child>
+    <div className="min-h-screen flex flex-col">
+      {/* Hero + Buscador */}
+      <section className="py-10 bg-gray-50 border-b">
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <h1 className="text-3xl font-bold mb-2">  perfecta</h1>
+          <p className="text-gray-600 mb-6">
+            Más de {fields.length} canchas disponibles cerca de ti
+          </p>
 
-          <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4 text-center">
-              <Transition.Child
-                as={Fragment}
-                enter="ease-out duration-300"
-                enterFrom="opacity-0 scale-95"
-                enterTo="opacity-100 scale-100"
-                leave="ease-in duration-200"
-                leaveFrom="opacity-100 scale-100"
-                leaveTo="opacity-0 scale-95"
-              >
-                <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                  <div className="flex justify-between items-center mb-4">
-                    <Dialog.Title as="h3" className="text-xl font-semibold leading-6 text-gray-900">
-                      Filtros Avanzados
-                    </Dialog.Title>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={clearFilters}
-                        className="text-blue-500 hover:text-blue-700 font-medium"
-                      >
-                        Limpiar filtros
-                      </button>
-                      <button
-                        onClick={() => setShowFilters(false)}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        <XMarkIcon className="h-5 w-5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Precio */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-gray-700">Precio por hora</h4>
-                      <div className="flex items-center space-x-4">
-                        <div>
-                          <label className="block text-sm text-gray-600">Mínimo</label>
-                          <input
-                            type="number"
-                            value={filters.minPrice}
-                            onChange={(e) => handleFilterChange("minPrice", Number(e.target.value))}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm text-gray-600">Máximo</label>
-                          <input
-                            type="number"
-                            value={filters.maxPrice}
-                            onChange={(e) => handleFilterChange("maxPrice", Number(e.target.value))}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Fecha */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-gray-700">Fecha</h4>
-                      <DatePicker
-                        selected={selectedDate}
-                        onChange={(date) => {
-                          setSelectedDate(date);
-                          handleFilterChange("date", date.toISOString().split("T")[0]);
-                        }}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        dateFormat="dd/MM/yyyy"
-                      />
-                    </div>
-
-                    {/* Tipo de Cancha */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-gray-700">Tipo de Cancha</h4>
-                      <div className="space-y-2">
-                        {fieldTypes.map((tipo) => (
-                          <label key={tipo} className="flex items-center">
-                            <input
-                              type="radio"
-                              name="fieldType"
-                              value={tipo}
-                              checked={filters.fieldType === tipo}
-                              onChange={(e) => handleFilterChange("fieldType", e.target.value)}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                            />
-                            <span className="ml-2 text-gray-700">{tipo}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Horarios Disponibles */}
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-gray-700">Horarios Disponibles</h4>
-                      <div className="space-y-2">
-                        {timeSlots.map((horario) => (
-                          <label key={horario} className="flex items-center">
-                            <input
-                              type="radio"
-                              name="timeSlot"
-                              value={horario}
-                              checked={filters.timeSlot === horario}
-                              onChange={(e) => handleFilterChange("timeSlot", e.target.value)}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                            />
-                            <span className="ml-2 text-gray-700">{horario}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Servicios */}
-                    <div className="space-y-2 col-span-1 md:col-span-2">
-                      <h4 className="font-medium text-gray-700">Servicios</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {servicesCatalog.map((servicio) => (
-                          <label key={servicio} className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={filters.services.includes(servicio)}
-                              onChange={() => handleServiceToggle(servicio)}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <span className="ml-2 text-gray-700">{servicio}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Valoración */}
-                    <div className="space-y-2 col-span-1 md:col-span-2">
-                      <div className="flex justify-between">
-                        <h4 className="font-medium text-gray-700">Valoración mínima</h4>
-                        <span className="text-blue-600 font-medium">
-                          {filters.minRating} estrellas
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="5"
-                        step="0.5"
-                        value={filters.minRating}
-                        onChange={(e) => handleFilterChange("minRating", Number(e.target.value))}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                      />
-                      <div className="flex justify-between text-xs text-gray-500">
-                        <span>0</span>
-                        <span>1</span>
-                        <span>2</span>
-                        <span>3</span>
-                        <span>4</span>
-                        <span>5</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end mt-6 space-x-3">
-                    <button
-                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
-                      onClick={() => setShowFilters(false)}
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-                      onClick={() => {
-                        fetchFields();
-                        setShowFilters(false);
-                      }}
-                    >
-                      Aplicar filtros
-                    </button>
-                  </div>
-                </Dialog.Panel>
-              </Transition.Child>
+          <div className="flex gap-2 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Buscar por nombre o ubicación..."
+                className="w-full pl-10 pr-4 py-3 border rounded-lg"
+                onKeyDown={(e) => e.key === "Enter" && fetchFields()}
+              />
             </div>
-          </div>
-        </Dialog>
-      </Transition>
-
-      {/* Hero principal */}
-      <section className="flex-1">
-        <div className="grid md:grid-cols-12 gap-8 items-start">
-          {/* Sidebar izquierda */}
-          <div className="md:col-span-3">
-            <Sidebar />
-          </div>
-
-          {/* Hero principal */}
-          <div className="md:col-span-9">
-            <Hero />
+            <button
+              onClick={fetchFields}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg"
+            >
+              Buscar
+            </button>
+            <button
+              onClick={() => setShowFilters((s) => !s)}
+              className="px-4 py-3 border rounded-lg flex items-center gap-2"
+            >
+              <SlidersHorizontal className="w-5 h-5" />
+              Filtros
+            </button>
           </div>
         </div>
+      </section>
 
-        {/* Selector de tema flotante */}
-        <ThemeSelector />
+      {/* Panel de Filtros */}
+      {showFilters && (
+        <section className="bg-white border-b shadow-sm py-6">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Filtros Avanzados</h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={clearFilters}
+                  className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1 rounded-md hover:bg-gray-100"
+                >
+                  Limpiar filtros
+                </button>
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500 hover:text-gray-700" />
+                </button>
+              </div>
+            </div>
 
+            {/* Aquí mantienes los filtros (ubicación, precio, tipo, servicios, etc.) */}
+            {/* ... mismos bloques de filtros que ya tienes ... */}
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <button
+                onClick={fetchFields}
+                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors"
+              >
+                Aplicar filtros
+              </button>
+              <button
+                onClick={() => setShowFilters(false)}
+                className="px-6 py-3 border border-gray-300 rounded-xl hover:bg-gray-50"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Mapa */}
+      <section className="flex-1 relative">
+        <div ref={mapRef} className="w-full h-[500px]" />
         {error && (
-          <div className="mt-6 bg-red-600 text-white px-4 py-2 rounded-lg shadow inline-block">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg shadow">
             {error}
           </div>
         )}

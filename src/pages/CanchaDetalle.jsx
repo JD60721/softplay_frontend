@@ -28,18 +28,13 @@ export default function CanchaDetalle() {
         <p className="text-gray-700">{c.descripcion}</p>
         <p className="mt-2">{c.direccion}</p>
         <p className="mt-1 font-semibold">${c.precioHora} / hora</p>
-        <Link
-          to={`/reservar/${c._id}`}
-          className="btn btn-primary mt-4 inline-block"
-        >
+        <Link to={`/reservar/${c._id}`} className="btn btn-primary mt-4 inline-block">
           Reservar
         </Link>
       </div>
       <div className="card">
         <h2 className="text-xl font-semibold mb-3">Ubicación</h2>
-        {c.ubicacion?.lat && (
-          <CanchaMap lat={c.ubicacion.lat} lng={c.ubicacion.lng} />
-        )}
+        {c.ubicacion?.lat && <CanchaMap lat={c.ubicacion.lat} lng={c.ubicacion.lng} />}
       </div>
     </div>
   );

@@ -2,26 +2,70 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    /* Tema claro (default) */
+    --color-primary: 59 130 246; /* blue-500 */
+    --color-primary-light: 96 165 250; /* blue-400 */
+    --color-primary-dark: 37 99 235; /* blue-600 */
+    --color-secondary: 139 92 246; /* purple-500 */
+    --color-secondary-light: 167 139 250; /* purple-400 */
+    --color-secondary-dark: 124 58 237; /* purple-600 */
+    --color-success: 34 197 94; /* green-500 */
+    --color-warning: 234 179 8; /* yellow-500 */
+    --color-error: 239 68 68; /* red-500 */
+    --color-info: 6 182 212; /* cyan-500 */
+  }
+
+  .dark {
+    /* Tema oscuro */
+    --color-primary: 96 165 250; /* blue-400 */
+    --color-primary-light: 147 197 253; /* blue-300 */
+    --color-primary-dark: 59 130 246; /* blue-500 */
+    --color-secondary: 167 139 250; /* purple-400 */
+    --color-secondary-light: 192 132 252; /* purple-300 */
+    --color-secondary-dark: 139 92 246; /* purple-500 */
+    --color-success: 74 222 128; /* green-400 */
+    --color-warning: 250 204 21; /* yellow-400 */
+    --color-error: 248 113 113; /* red-400 */
+    --color-info: 34 211 238; /* cyan-400 */
+  }
+
+  .sports {
+    /* Tema deportes */
+    --color-primary: 16 185 129; /* emerald-500 */
+    --color-primary-light: 52 211 153; /* emerald-400 */
+    --color-primary-dark: 5 150 105; /* emerald-600 */
+    --color-secondary: 245 158 11; /* amber-500 */
+    --color-secondary-light: 251 191 36; /* amber-400 */
+    --color-secondary-dark: 217 119 6; /* amber-600 */
+    --color-success: 34 197 94; /* green-500 */
+    --color-warning: 234 179 8; /* yellow-500 */
+    --color-error: 239 68 68; /* red-500 */
+    --color-info: 6 182 212; /* cyan-500 */
+  }
+}
+
 /* Estilos base */
 body { 
-  @apply text-gray-800; 
+  @apply text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-900; 
 }
 
 /* Componentes mejorados */
 .card { 
-  @apply bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 hover:shadow-2xl transition-all duration-300; 
+  @apply bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300 dark:bg-gray-800/95 dark:border-gray-700; 
 }
 
 .btn { 
-  @apply px-4 py-2 rounded-xl shadow-md font-medium border transition-all duration-200 transform hover:scale-105; 
+  @apply px-6 py-3 rounded-xl shadow-md font-semibold border transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2; 
 }
 
 .btn-primary { 
-  @apply bg-blue-600 text-white border-blue-700 hover:bg-blue-700 hover:border-blue-800 hover:shadow-lg; 
+  @apply bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg focus:ring-blue-500; 
 }
 
 .input { 
-  @apply border-2 rounded-xl px-4 py-3 w-full bg-gray-50 border-gray-200 focus:border-blue-500 focus:bg-white focus:outline-none transition-all duration-200 focus:shadow-md; 
+  @apply border-2 rounded-xl px-4 py-3 w-full bg-white border-gray-200 focus:border-blue-500 focus:bg-white focus:outline-none transition-all duration-200 focus:shadow-lg focus:ring-2 focus:ring-blue-500/20 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:focus:border-blue-400; 
 }
 
 /* Animación para el dropdown del selector de temas */

@@ -1,75 +1,70 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import Button from "../../components/common/Button";
+import Card from "../../components/common/Card";
 
 export default function Hero() {
   return (
-    <div>
-      <h1 className="text-5xl md:text-6xl font-extrabold leading-tight text-white">
-        !Reserva tu cancha ahora¡
+    <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-8 md:p-10">
+      <h1 className="text-4xl md:text-5xl font-extrabold leading-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+        ¡Reserva tu cancha ahora!
       </h1>
-      <p className="mt-6 text-slate-300 text-lg max-w-xl">
+
+      <p className="mt-4 text-gray-600 dark:text-gray-300 text-lg max-w-2xl">
         Encuentra y reserva las mejores canchas deportivas cerca de ti. Fútbol, tenis, básquet,
         pádel y más deportes disponibles con reserva inmediata.
       </p>
-      <div className="mt-8 flex gap-4">
-        <Link
-          to="/canchas"
-          className="px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white font-semibold rounded-xl hover:from-green-700 hover:to-blue-700 transition-colors"
-        >
-          Reservar ahora
+
+      <div className="mt-8 flex flex-wrap gap-4">
+        <Link to="/canchas">
+          <Button variant="primary" size="lg" className="hover:shadow-lg">
+            Reservar ahora
+          </Button>
         </Link>
-        <Link
-          to="/reservas"
-          className="px-6 py-3 border border-slate-700 text-slate-200 rounded-xl hover:bg-slate-800"
-        >
-          Mis reservas
+        <Link to="/reservas">
+          <Button variant="outline" size="lg">
+            Mis reservas
+          </Button>
         </Link>
       </div>
 
-      {/* Tarjeta tipo cancha */}
-      <div className="relative mt-8">
-        <Link
-          to="/canchas"
-          className="block rounded-2xl bg-green-600 p-4 shadow-xl hover:bg-green-700 transition-colors cursor-pointer"
-          aria-label="Ir a listado de canchas"
+      <Link to="/canchas" aria-label="Ir a listado de canchas" className="block">
+        <div className="text-center text-gray-800 dark:text-white font-semibold mb-2">SoftPlay</div>
+        <svg
+          viewBox="0 0 400 240"
+          className="w-full h-[240px] rounded-xl bg-transparent text-blue-600 dark:text-blue-400"
         >
-          <div className="rounded-2xl bg-green-600 p-4 shadow-xl">
-            <div className="text-center text-white font-semibold mb-2">SoftPlay</div>
-            <svg viewBox="0 0 400 240" className="w-full h-[260px] bg-green-600 rounded-xl">
-              <rect
-                x="10"
-                y="10"
-                width="380"
-                height="220"
-                fill="none"
-                stroke="#fff"
-                strokeWidth="4"
-              />
-              <line x1="200" y1="10" x2="200" y2="230" stroke="#fff" strokeWidth="3" />
-              <circle cx="200" cy="120" r="26" fill="none" stroke="#fff" strokeWidth="3" />
-              <rect
-                x="40"
-                y="70"
-                width="60"
-                height="100"
-                fill="none"
-                stroke="#fff"
-                strokeWidth="3"
-              />
-              <rect
-                x="300"
-                y="70"
-                width="60"
-                height="100"
-                fill="none"
-                stroke="#fff"
-                strokeWidth="3"
-              />
-            </svg>
-            <div className="mt-3 text-center"></div>
-          </div>
-        </Link>
-      </div>
-    </div>
+          <rect
+            x="10"
+            y="10"
+            width="380"
+            height="220"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+          />
+          <line x1="200" y1="10" x2="200" y2="230" stroke="currentColor" strokeWidth="2" />
+          <circle cx="200" cy="120" r="26" fill="none" stroke="currentColor" strokeWidth="2" />
+          <rect
+            x="40"
+            y="70"
+            width="60"
+            height="100"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+          <rect
+            x="300"
+            y="70"
+            width="60"
+            height="100"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+        </svg>
+      </Link>
+    </section>
   );
 }

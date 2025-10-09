@@ -1,117 +1,140 @@
-import { Routes, Route, Navigate, Link, useNavigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
-import Home from "./pages/Home.jsx";
-import Canchas from "./pages/Canchas.jsx";
+import CanchasPage from "./pages/CanchasPage.jsx";
 import CanchaDetalle from "./pages/CanchaDetalle.jsx";
 import NuevaReserva from "./pages/NuevaReserva.jsx";
 import MisReservas from "./pages/MisReservas.jsx";
+import ReservaDetalle from "./pages/ReservaDetalle.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
 import AdminCanchas from "./pages/admin/AdminCanchas.jsx";
 import AdminSistema from "./pages/admin/AdminSistema.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import { useSelector, useDispatch } from "react-redux";
-import { logout, meThunk } from "./redux/slices/authSlice.js";
+import DashboardLayout from "./layouts/DashboardLayout.jsx";
+import { ThemeProvider } from "./contexts/ThemeContext.jsx";
+// Mantenemos la importación de Redux para el ProtectedRoute
+import { useSelector } from "react-redux";
+import Hero from "./pages/home/Hero.jsx";
 
 export default function App() {
+  // Mantenemos el acceso al estado de autenticación para las rutas protegidas
   const { user } = useSelector((s) => s.auth);
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  // Forzar logout al iniciar la app para evitar sesión persistida
-  useEffect(() => {
-    dispatch(meThunk());
-  }, [dispatch]);
 
   return (
-    <div>
-      {user && (
-        <header className="fixed top-0 left-0 right-0 z-50 bg-slate-900 border-b border-slate-800 text-slate-100">
-          <div className="max-w-6xl mx-auto p-4 flex items-center gap-4">
-            <nav className="flex gap-3 text-slate-200">
-              {user && location.pathname !== "/home" && <Link to="/home">Inicio</Link>}
-              {user && location.pathname !== "/reservas" && (
-                <Link to="/reservas">Mis reservas</Link>
-              )}
-              {user?.role === "admin_sistema" && location.pathname !== "/admin/sistema" && (
-                <Link to="/admin/sistema">Admin Sistema</Link>
-              )}
-              {user?.role === "admin_sistema" && location.pathname !== "/admin/canchas" && (
-                <Link to="/admin/canchas">Admin Canchas</Link>
-              )}
-            </nav>
-            <div className="ml-auto">
-              {!user ? null : (
-                <div className="flex items-center gap-3">
-                  <span>Hola, {user.name}</span>
-                  <button
-                    className="btn"
-                    onClick={() => {
-                      dispatch(logout());
-                      navigate("/login");
-                    }}
-                  >
-                    Salir
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </header>
-      )}
-      <main className={`max-w-6xl mx-auto p-4 ${user ? "pt-20" : ""}`}>
-        <Routes>
-          <Route
-            path="/home"
-            element={
-              <ProtectedRoute>
-                <Home />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/" element={<Navigate to="/home" />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/canchas" element={<Canchas />} />
-          <Route path="/canchas/:id" element={<CanchaDetalle />} />
-          <Route
-            path="/reservar/:id"
-            element={
-              <ProtectedRoute>
+    <ThemeProvider>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Rutas públicas sin layout */}
+        <Route
+          path="/canchas"
+          element={
+            <DashboardLayout>
+              <CanchasPage />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/canchas/:id"
+          element={
+            <DashboardLayout>
+              <CanchaDetalle />
+            </DashboardLayout>
+          }
+        />
+
+        {/* Rutas protegidas con DashboardLayout */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Dashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/home"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <Hero></Hero>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/reservar/:id"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
                 <NuevaReserva />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/reservas"
-            element={
-              <ProtectedRoute>
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/mis-reservas"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
                 <MisReservas />
-              </ProtectedRoute>
-            }
-          />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
 
-          <Route
-            path="/admin/canchas"
-            element={
-              <ProtectedRoute requireRoles={["admin_cancha", "admin_sistema"]}>
+        <Route
+          path="/reservas"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <MisReservas />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/reservas/:id"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <ReservaDetalle />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/canchas"
+          element={
+            <ProtectedRoute requireRoles={["admin_cancha", "admin_sistema"]}>
+              <DashboardLayout>
                 <AdminCanchas />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/sistema"
-            element={
-              <ProtectedRoute requireRoles={["admin_sistema"]}>
-                <AdminSistema />
-              </ProtectedRoute>
-            }
-          />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
 
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </main>
-    </div>
+        <Route
+          path="/admin/sistema"
+          element={
+            <ProtectedRoute requireRoles={["admin_sistema"]}>
+              <DashboardLayout>
+                <AdminSistema />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </ThemeProvider>
   );
 }

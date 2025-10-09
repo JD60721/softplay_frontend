@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { registerThunk } from "../redux/slices/authSlice.js";
 import { useNavigate, Link } from "react-router-dom";
 import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaUserTag, FaSpinner, FaCheckCircle } from "react-icons/fa";
+import Captcha from "../components/common/Captcha.jsx";
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -18,6 +19,8 @@ export default function Register() {
   const [formErrors, setFormErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const [captchaId, setCaptchaId] = useState('');
+  const [captchaInput, setCaptchaInput] = useState('');
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -55,8 +58,12 @@ export default function Register() {
       errors.confirmPassword = "Las contraseñas no coinciden";
     }
 
+    if (touched.captcha && !captchaInput) {
+      errors.captcha = "El código de verificación es requerido";
+    }
+
     setFormErrors(errors);
-  }, [formData, touched]);
+  }, [formData, touched, captchaInput]);
 
   // Calcular fortaleza de contraseña
   useEffect(() => {
@@ -86,6 +93,11 @@ export default function Register() {
     }));
   };
 
+  const handleCaptchaChange = (id, input) => {
+    setCaptchaId(id);
+    setCaptchaInput(input);
+  };
+
   const getPasswordStrengthColor = () => {
     if (passwordStrength < 25) return "bg-red-500";
     if (passwordStrength < 50) return "bg-yellow-500";
@@ -104,15 +116,20 @@ export default function Register() {
     e.preventDefault();
     
     // Marcar todos los campos como tocados
-    setTouched({ name: true, email: true, password: true, confirmPassword: true });
+    setTouched({ name: true, email: true, password: true, confirmPassword: true, captcha: true });
     
     // Verificar si hay errores
     if (Object.keys(formErrors).length === 0 && 
         formData.name && formData.email && formData.password && 
-        formData.password === formData.confirmPassword) {
+        formData.password === formData.confirmPassword && captchaInput) {
       
       const { confirmPassword, ...dataToSend } = formData;
-      const result = await dispatch(registerThunk(dataToSend));
+      const registerData = {
+        ...dataToSend,
+        captchaId,
+        captchaInput
+      };
+      const result = await dispatch(registerThunk(registerData));
       
       if (result.type.endsWith('/fulfilled')) {
         navigate("/");
@@ -121,15 +138,15 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="bg-gradient-to-r from-green-600 to-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <FaUser className="text-white text-2xl" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Crear cuenta</h1>
-          <p className="text-slate-300">Únete y comienza a reservar canchas</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Crear cuenta</h1>
+          <p className="text-gray-600">Únete y comienza a reservar canchas</p>
         </div>
 
         {/* Form Card */}
@@ -144,7 +161,7 @@ export default function Register() {
               <input
                 id="name"
                 type="text"
-                className={`w-full px-4 py-3 bg-gray-50 text-gray-800 placeholder-gray-500 border-2 rounded-xl focus:outline-none transition-colors ${
+                className={`w-full px-4 py-3 bg-gray-50 border-2 rounded-xl focus:outline-none transition-colors ${
                   formErrors.name 
                     ? 'border-red-300 focus:border-red-500 bg-red-50' 
                     : 'border-gray-200 focus:border-blue-500 focus:bg-white'
@@ -172,7 +189,7 @@ export default function Register() {
               <input
                 id="email"
                 type="email"
-                className={`w-full px-4 py-3 bg-gray-50 text-gray-800 placeholder-gray-500 border-2 rounded-xl focus:outline-none transition-colors ${
+                className={`w-full px-4 py-3 bg-gray-50 border-2 rounded-xl focus:outline-none transition-colors ${
                   formErrors.email 
                     ? 'border-red-300 focus:border-red-500 bg-red-50' 
                     : 'border-gray-200 focus:border-blue-500 focus:bg-white'
@@ -201,7 +218,7 @@ export default function Register() {
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  className={`w-full px-4 py-3 pr-12 bg-gray-50 text-gray-800 placeholder-gray-500 border-2 rounded-xl focus:outline-none transition-colors ${
+                  className={`w-full px-4 py-3 pr-12 bg-gray-50 border-2 rounded-xl focus:outline-none transition-colors ${
                     formErrors.password 
                       ? 'border-red-300 focus:border-red-500 bg-red-50' 
                       : 'border-gray-200 focus:border-blue-500 focus:bg-white'
@@ -257,7 +274,7 @@ export default function Register() {
                 <input
                   id="confirmPassword"
                   type={showConfirmPassword ? "text" : "password"}
-                  className={`w-full px-4 py-3 pr-12 bg-gray-50 text-gray-800 placeholder-gray-500 border-2 rounded-xl focus:outline-none transition-colors ${
+                  className={`w-full px-4 py-3 pr-12 bg-gray-50 border-2 rounded-xl focus:outline-none transition-colors ${
                     formErrors.confirmPassword 
                       ? 'border-red-300 focus:border-red-500 bg-red-50' 
                       : formData.confirmPassword && formData.password === formData.confirmPassword
@@ -321,6 +338,13 @@ export default function Register() {
               </div>
             </div>
 
+            {/* CAPTCHA */}
+            <Captcha 
+              onChange={handleCaptchaChange}
+              error={formErrors.captcha}
+              loading={loading}
+            />
+
             {/* Server Error */}
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4">
@@ -351,11 +375,11 @@ export default function Register() {
 
         {/* Login Link */}
         <div className="text-center mt-8">
-          <p className="text-slate-300">
+          <p className="text-gray-600">
             ¿Ya tienes una cuenta?{' '}
             <Link 
               to="/login" 
-              className="text-blue-400 hover:text-blue-300 font-semibold hover:underline transition-colors"
+              className="text-blue-600 hover:text-blue-800 font-semibold hover:underline transition-colors"
             >
               Inicia sesión
             </Link>

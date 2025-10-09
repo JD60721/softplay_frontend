@@ -1,15 +1,26 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../api/axios.js";
 
-export const fetchCanchas = createAsyncThunk("canchas/list", async (params = {}) => {
-  // Si params es un string, asumimos que es el parámetro q (búsqueda por texto)
-  const searchParams = typeof params === 'string' ? { q: params } : params;
-  const { data } = await api.get("/canchas", { params: searchParams });
+// Acepta un query string (e.g. "q=x&lat=...&lng=..."),
+// asegurando que todos los filtros se envíen correctamente al backend
+export const fetchCanchas = createAsyncThunk("canchas/list", async (query = "") => {
+  const url = query ? `/canchas?${query}` : "/canchas";
+  const { data } = await api.get(url);
   return data;
 });
 export const createCancha = createAsyncThunk("canchas/create", async (payload) => {
   const { data } = await api.post("/canchas", payload);
   return data;
+});
+
+export const updateCancha = createAsyncThunk("canchas/update", async ({ id, data: payload }) => {
+  const { data } = await api.put(`/canchas/${id}`, payload);
+  return data;
+});
+
+export const deleteCancha = createAsyncThunk("canchas/delete", async (id) => {
+  await api.delete(`/canchas/${id}`);
+  return id;
 });
 export const uploadFiles = async (files) => {
   const form = new FormData();
@@ -25,7 +36,14 @@ const slice = createSlice({
   extraReducers: b=>{
     b.addCase(fetchCanchas.pending, s=>{s.loading=true;})
      .addCase(fetchCanchas.fulfilled, (s,{payload})=>{ s.loading=false; s.list=payload; })
-     .addCase(fetchCanchas.rejected, s=>{s.loading=false;});
+     .addCase(fetchCanchas.rejected, s=>{s.loading=false;})
+     .addCase(updateCancha.fulfilled, (s,{payload})=>{
+       const index = s.list.findIndex(c => c._id === payload._id);
+       if (index !== -1) s.list[index] = payload;
+     })
+     .addCase(deleteCancha.fulfilled, (s,{payload})=>{
+       s.list = s.list.filter(c => c._id !== payload);
+     });
   }
 });
 
