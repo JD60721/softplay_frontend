@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaRedo, FaShieldAlt } from 'react-icons/fa';
 import api from '../../api/axios.js';
+import { API_BASE_URL } from '../../config/api.js';
 
 const Captcha = ({ onCaptchaChange, error, disabled = false }) => {
   const [captchaData, setCaptchaData] = useState(null);
@@ -10,7 +11,8 @@ const Captcha = ({ onCaptchaChange, error, disabled = false }) => {
   const generateCaptcha = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/captcha/generate');
+      // Usar URL absoluta del backend para evitar problemas de proxy/rewrite
+      const response = await api.get(`${API_BASE_URL.replace(/\/$/, '')}/captcha/generate`);
       setCaptchaData(response.data);
       setCaptchaInput('');
       // Notificar al componente padre sobre el cambio
