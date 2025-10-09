@@ -5,13 +5,15 @@
  * @param {string} filename - Nombre o ruta (ej: "1755996775927.png" o "/uploads/1755996775927.png")
  * @returns {string} - URL completa para usar en <img src="..." />
  */
+import { BACKEND_ORIGIN } from "../config/api.js";
+
 export const imageUrl = (filename) => {
   if (!filename) {
     console.warn('imageUrl: No filename provided');
     return "/no-image.png"; // Imagen por defecto si no hay archivo
   }
 
-  const baseUrl = import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:5000";
+  const baseUrl = BACKEND_ORIGIN;
 
   // Si ya contiene /uploads/, evitar duplicarlo
   if (filename.startsWith("/uploads")) {
